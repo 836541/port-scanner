@@ -24,7 +24,7 @@ Algumas funções para melhor funcionalidades
 [1] - Parâmetro -h/--host suporta tanto hostname quanto address
 Botar o gethostbyaddr no header
 
-
+IN PROGRESS -> 20% COMPLETED, NOT EVEN arguments() IS COMPLETED.
 
 '''
 import threading 
