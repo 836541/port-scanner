@@ -23,12 +23,12 @@ Features pedidas no Checkpoint
 6.1 - Verbose         (-v/--verbose) 
 6.2 - Banner Grabbing (-b/--banner)
 6.3 - IPv6            (-i/--ipv6)
-6.4 - O parãmetro -r, onde deve ser inputado as portas, aceita 4 tipos de sintaxe (Podem ser combinados, com excessão da sintaxe D)
+6.4 - O parãmetro -p, onde deve ser inputado as portas, aceita 4 tipos de sintaxe (Podem ser combinados, com excessão da sintaxe D)
 A- 1 valor de porta qualquer
 B- Mais de um valor de porta, desde que separadas por vírgula -> 80,443,8080
 C- Ranges de Portas  -> 1-14214
 D- Um arquivo contendo uma porta escrita por linha
-6.5 - O parâmetro -p, onde deve ser inputado o host alvo aceita os tipos de sintaxe:
+6.5 - O parâmetro -r, onde deve ser inputado o host alvo aceita os tipos de sintaxe:
 A- Valor URL
 B- Valor IPv6 (caso -i seja usado depois também)
 C- Net IDs que também devem ser scaneados, escritos após um IPv4 -> 192.168.0.1,2,3,4 scaneia  1, 2, 3 e 4.
@@ -50,9 +50,9 @@ screenLock = threading.Semaphore(value=1)  # ordenação das threads para que se
 def arguments():
     parser = optparse.OptionParser()
     
-    parser.add_option("-p", "--host", dest= "host", help= "Target IP/Hostname. In /24 CIDR you can use Commas to add host ID (without the netid) to same subnet or use - between values to scan ranges. Input a txt if you rather write all desired IPs on a file. If IP is v6 you can only input a single address" )
+    parser.add_option("-r", "--host", dest= "host", help= "Target IP/Hostname. In /24 CIDR you can use Commas to add host ID (without the netid) to same subnet or use - between values to scan ranges. Input a txt if you rather write all desired IPs on a file. If IP is v6 you can only input a single address" )
     parser.add_option("-i", "--ipv6", dest= "ipv6", default= False, action="store_true", help= "Port Scanning of an IPv6 IP. Use -i and input the ipv6 address at -t")
-    parser.add_option("-r", "--range", dest= "range", default=False, help= "Ports. 1 value = 1 port. Values after a comma are added and values like 10-30 are ranges. Input a txt if you rather write all IPs on a file. Not using -r will make the software scan ALL PORTS")
+    parser.add_option("-p", "--range", dest= "range", default=False, help= "Ports. 1 value = 1 port. Values after a comma are added and values like 10-30 are ranges. Input a txt if you rather write all IPs on a file. Not using -r will make the software scan ALL PORTS")
     parser.add_option("-l", "--localhost", dest= "localhost", default= False, action="store_true", help= "Scanned host will be localhost, which is a public ip")
     parser.add_option("-t", "--tcpscan", dest= "tcpscan", default= False, action= "store_true", help= "Triple Way Handshake") 
     parser.add_option("-s", "--stealthscan", dest= "stealthscan", default=False, action= "store_true", help= "SYN -> SYN/ACK -> Cancel three-way handshake")
@@ -124,7 +124,7 @@ class PortScanner:
            except:
                pass
            print("__"*38)
-           print(f"PORT \tSTATE\tSERVICE\tSCANTYPE\tOS\tHOST ")
+           print(f"PORT \t\tSTATE\t\tSERVICE\tSCANTYPE\tOS\tHOST ")
         screenLock.release()
 
     def associatePortToService(self, port):
@@ -146,9 +146,9 @@ class PortScanner:
         '''         
         try:
             openport, service = self.associatePortToService(port)
-            print(f"{openport}\t{state}\t{service}\t{self.scantype}\t\t?\t{self.host}")
+            print(f"{openport}\t\t{state}\t{service}\t{self.scantype}\t\t?\t{self.host}")
         except: 
-            print(f"{port}\t{state} \t\t?\t{self.scantype}\t?\t{self.host}")
+            print(f"    {port}\t\t{state}\t?\t    {self.scantype}\t?\t{self.host}")
 
     # def getOS(self):
 
@@ -181,7 +181,7 @@ class PortScanner:
             conn.settimeout(2) 
             conn.connect((self.host, self.port)) 
             screenLock.acquire()                     
-            self.outputBody(self.port, "OPEN")
+            self.outputBody(self.port, "OPEN          ")
             conn.send(b"FABIO PIRES LINUX")    # Manda uma mensagem pra pegar o banner
                                    
         except:
@@ -226,19 +226,19 @@ class PortScanner:
 
         screenLock.acquire()
 
-        stealth_scan = sr1(tcp_ip, timeout= 15)           # Envio do pacote utilizando SR1, pois só quero receber 1 pacote de resposta. O SR recebe todos.     
+        stealth_scan = sr1(tcp_ip, timeout= 10)           # Envio do pacote utilizando SR1, pois só quero receber 1 pacote de resposta. O SR recebe todos.     
         if stealth_scan == None:                          # Se o pacote sucedeu, mas não houve resposta, há um Firewall Filtrando
-            self.outputBody(self.port, "FILTERED")
-            
-        if stealth_scan.haslayer(TCP):          # Checando se a resposta  veio com pacote TCP
-            if stealth_scan.getlayer(TCP).flags == 0x12:   # Checando se houve resposta SYN + ACK ao meu SYN
-               self.outputBody(self.port, "OPEN")         # Se houve, printo que está aberto
-               rst = sr1(ip_packet/TCP(sport= self.port, dport= self.port, flags="R"), timeout= 0.5)   # Respondo o SYN + ACK com RST para não finalizar o Handshake triplo
-            if stealth_scan.getlayer(TCP).flags == 0x14:  # Checando se a resposta ao SYN foi RST
-               self.closed = self.port               # Se sim, é porque a porta está fechada, então armazenarei no atributo de portas fechadas.
-        if stealth_scan.haslayer(ICMP):         # Checando se há protocolo ICMP envolvido no pacote
-            if int(stealth_scan.getlayer(ICMP).type) == 3 and int(stealth_scan.getlayer(ICMP).code) in [1,2,3,9,10,13]:  # erro 3 (UNREACHABLE), junto com certo valor de code é porque está filtrada
-                self.outputBody(self.port, "FILTERED")
+            self.outputBody(self.port, "FILTERED      ")
+        else:   
+           if stealth_scan.haslayer(TCP):          # Checando se a resposta  veio com pacote TCP
+               if stealth_scan.getlayer(TCP).flags == 0x12:   # Checando se houve resposta SYN + ACK ao meu SYN
+                  self.outputBody(self.port, "OPEN          ")         # Se houve, printo que está aberto
+                  rst = sr1(ip_packet/TCP(sport= self.port, dport= self.port, flags="R"), timeout= 0.5)   # Respondo o SYN + ACK com RST para não finalizar o Handshake triplo
+               if stealth_scan.getlayer(TCP).flags == 0x14:  # Checando se a resposta ao SYN foi RST
+                  self.closed = self.port               # Se sim, é porque a porta está fechada, então armazenarei no atributo de portas fechadas.
+           if stealth_scan.haslayer(ICMP):         # Checando se há protocolo ICMP envolvido no pacote
+               if int(stealth_scan.getlayer(ICMP).type) == 3 and int(stealth_scan.getlayer(ICMP).code) in [1,2,3,9,10,13]:  # erro 3 (UNREACHABLE), junto com certo valor de code é porque está filtrada
+                   self.outputBody(self.port, "FILTERED     ")
 
         screenLock.release()
 
@@ -258,18 +258,19 @@ class PortScanner:
            ip_packet  = IP (dst= self.host)
         tcp_packet = TCP(dport= self.port, flags= "FPU")      # pacote TCP com as flags FYN, PSH e URG
         tcp_ip = ip_packet/tcp_packet
-        xmas_scan  = sr1(tcp_ip, timeout= 15)
+        xmas_scan  = sr1(tcp_ip, timeout= 10)
 
         screenLock.acquire()
 
         if xmas_scan == None:                              # SEM RESPOSTA -> OPEN OU FILTERED
-            self.outputBody(self.port, "OPEN|FILTERED")
-        if xmas_scan.haslayer(TCP):
-            if xmas_scan.getlayer(TCP).flags == 0x14:      # Resposta RST -> PORTA FECHADA
-                self.closed = self.port
-        if xmas_scan.haslayer(ICMP):
-            if int(xmas_scan.getlayer(ICMP).type) == 3 and int(xmas_scan.getlayer(ICMP).code) in [1,2,3,9,10,13]: # assim como explicado no stealth scan, são valores que indicam filter
-                self.outputBody(self.port, "FILTERED")
+            self.outputBody(self.port, "OPEN or FILTER")
+        else:
+            if xmas_scan.haslayer(TCP):
+               if xmas_scan.getlayer(TCP).flags == 0x14:      # Resposta RST -> PORTA FECHADA
+                  self.closed = self.port
+            if xmas_scan.haslayer(ICMP):
+               if int(xmas_scan.getlayer(ICMP).type) == 3 and int(xmas_scan.getlayer(ICMP).code) in [1,2,3,9,10,13]: # assim como explicado no stealth scan, são valores que indicam filter
+                   self.outputBody(self.port, "FILTER")
 
         screenLock.release()
 
@@ -288,18 +289,19 @@ class PortScanner:
            ip_packet  = IP (dst= self.host)
         tcp_packet = TCP(dport= self.port, flags="F")
         tcp_ip = ip_packet/tcp_packet 
-        fin_scan   = sr1(tcp_ip, timeout=15)
+        fin_scan   = sr1(tcp_ip, timeout=10)
 
         screenLock.acquire()
 
         if fin_scan == None:
-            self.outputBody(self.port, "OPEN|FILTERED")
-        if fin_scan.haslayer(TCP):
-            if fin_scan.getlayer(TCP).flags == 0x14: 
-                self.closed = self.port 
-        if fin_scan.haslayer(ICMP):
-            if int(fin_scan.getlayer(ICMP).type) == 3 and int(fin_scan.getlayer(ICMP).code) in [1,2,3,9,10,13]:
-                self.outputBody(self.port, "FILTERED")
+            self.outputBody(self.port, "OPEN or FILTER")
+        else:
+           if fin_scan.haslayer(TCP):
+               if fin_scan.getlayer(TCP).flags == 0x14: 
+                   self.closed = self.port 
+           if fin_scan.haslayer(ICMP):
+               if int(fin_scan.getlayer(ICMP).type) == 3 and int(fin_scan.getlayer(ICMP).code) in [1,2,3,9,10,13]:
+                   self.outputBody(self.port, "FILTER        ")
 
         screenLock.release()
 
@@ -319,18 +321,19 @@ class PortScanner:
         ip_packet = IP (dst= self.host) 
         tcp_packet= TCP(dport= self.port, flags='')
         tcp_ip = ip_packet/tcp_packet
-        null_scan = sr1(tcp_ip, timeout=15)
+        null_scan = sr1(tcp_ip, timeout=10)
 
         screenLock.acquire()
 
         if null_scan == None:
-            self.outputBody(self.port, "OPEN|FILTERED")
-        if null_scan.haslayer(TCP):
-            if null_scan.getlayer(TCP).flags == 0x14:
-                self.closed=self.port 
-        if null_scan.haslayer(ICMP):
-           if int(null_scan.getlayer(ICMP).type) == 3 and int(null_scan.getlayer(ICMP).code) in [1,2,3,9,10,13]:
-              self.outputBody(self.port, "FILTERED")
+            self.outputBody(self.port, "OPEN or FILTER")
+        else:
+            if null_scan.haslayer(TCP):
+               if null_scan.getlayer(TCP).flags == 0x14:
+                   self.closed=self.port 
+            if null_scan.haslayer(ICMP):
+              if int(null_scan.getlayer(ICMP).type) == 3 and int(null_scan.getlayer(ICMP).code) in [1,2,3,9,10,13]:
+                 self.outputBody(self.port, "FILTER        ")
 
         screenLock.release()
     
@@ -349,18 +352,19 @@ class PortScanner:
            ip_packet  = IP (dst= self.host)
         tcp_packet = TCP(dport= self.port, flags= "A")
         tcp_ip = ip_packet/tcp_packet
-        tcp_ack_scan = sr1(tcp_ip, timeout=15)
+        tcp_ack_scan = sr1(tcp_ip, timeout=10)
 
         screenLock.acquire()
 
         if tcp_ack_scan == None:
-            self.outputBody(self.port, "FILTERED")
-        if tcp_ack_scan.haslayer(TCP):
-            if tcp_ack_scan.getlayer(TCP).flags == 0X4:
-                self.outputBody(self.port, "NO-FILTER")
-        if tcp_ack_scan.haslayer(ICMP):
-            if int(tcp_ack_scan.getlayer(ICMP).type) == 3 and int(tcp_ack_scan.getlayer(ICMP).code) in [1,2,3,9,10,13]:
-                self.outputBody(self.port, "FILTERED")
+            self.outputBody(self.port, "FILTER        ")
+        else:
+           if tcp_ack_scan.haslayer(TCP):
+               if tcp_ack_scan.getlayer(TCP).flags == 0X4:
+                   self.outputBody(self.port, "NO-FILTER     ")
+           if tcp_ack_scan.haslayer(ICMP):
+               if int(tcp_ack_scan.getlayer(ICMP).type) == 3 and int(tcp_ack_scan.getlayer(ICMP).code) in [1,2,3,9,10,13]:
+                   self.outputBody(self.port, "FILTER        ")
 
         screenLock.release()
     
@@ -378,18 +382,21 @@ class PortScanner:
            ip_packet  = IP (dst= self.host)
         tcp_packet = TCP(dport=self.port, flags="A")
         tcp_ip = ip_packet/tcp_packet
-        tcp_window_scan = sr1(tcp_ip, timeout=15)
+        tcp_window_scan = sr1(tcp_ip, timeout=10)
 
         screenLock.acquire()
 
         '''if tcp_window_scan == None:
             self.outputBody(self.port, "UNKNOWN")'''
         
-        if tcp_window_scan.haslayer(TCP):
-            if tcp_window_scan.getlayer(TCP).window > 0:
-                self.outputBody(self.port, "OPEN")
-            else:
-                self.closed = self.port  
+        if tcp_window_scan == None:
+            self.outputBody(self.port, "FILTER        ")
+        else:
+           if tcp_window_scan.haslayer(TCP):
+               if tcp_window_scan.getlayer(TCP).window > 0:
+                   self.outputBody(self.port, "OPEN          ")
+               else:
+                   self.closed = self.port  
 
         screenLock.release()
 
@@ -414,17 +421,17 @@ class PortScanner:
         screenLock.acquire()
 
         for num in range(3):            # Como a garantia de entrega do UDP é feita pela camada 07 (menos garantia), devemos capturar mais de 1 pacote pra ter certeza quanto ao scan.
-            udp_packets.append(sr1(udp_ip, timeout=15))
+            udp_packets.append(sr1(udp_ip, timeout=10))
 
         for response in udp_packets:
             if response != None: 
                 if response.haslayer(UDP):
-                    self.outputBody(self.port, "OPEN(UDP)")
+                    self.outputBody(self.port, "OPEN(UDP)     ")
                 if response.haslayer(ICMP):
                     if int(response.getlayer(ICMP).type) == 3 and int(response.getlayer(ICMP).code) == 3:
                         self.closed = self.port
                     if int(response.getlayer(ICMP).type) == 3 and int(response.getlayer(ICMP).code) in [1,2,3,9,10,13]:
-                        self.outputBody(self.port, "FILTERED")
+                        self.outputBody(self.port, "FILTER        ")
 
         screenLock.release()
     
@@ -432,7 +439,12 @@ class PortScanner:
 def main():
     host, ipv6, port, localhost, tcpscan, stealthscan, xmas, ack, null, fin, window, udp, verbose, webserver, dump, closed = arguments()
     
-    hosts = [host]
+    try:
+       socket.gethostbyaddr(host)
+       hosts = [host]
+    except:
+        hosts = list()
+
     ports = list() 
 
     if not verbose:
@@ -564,7 +576,7 @@ def main():
             scan = PortScanner(target, 0, knownports, ipv6, verbose, webserver, dump, closed)
             for value in ports:
               scan = PortScanner(target, value, knownports, ipv6, verbose, webserver, dump, closed)
-              t = threading.Thread(target= scan.udpscan)
+              t = threading.Thread(target= scan.udp_scan)
               t.start()
 
     if tcpscan:
@@ -576,12 +588,11 @@ def main():
               t.start()
 
 
-   # FAZER UM PRINT DE HOST POR MÉTODO
 
 if __name__ == "__main__":
     main()
-   
 
+   
 
 
 
