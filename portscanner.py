@@ -28,7 +28,7 @@ A- 1 valor de porta qualquer
 B- Mais de um valor de porta, desde que separadas por vírgula -> 80,443,8080
 C- Ranges de Portas  -> 1-14214
 D- Um arquivo contendo uma porta escrita por linha
-6.5 - O parâmetro -t, onde deve ser inputado o host alvo aceita os tipos de sintaxe:
+6.5 - O parâmetro -p, onde deve ser inputado o host alvo aceita os tipos de sintaxe:
 A- Valor URL
 B- Valor IPv6 (caso -i seja usado depois também)
 C- Net IDs que também devem ser scaneados, escritos após um IPv4 -> 192.168.0.1,2,3,4 scaneia  1, 2, 3 e 4.
@@ -50,11 +50,11 @@ screenLock = threading.Semaphore(value=1)  # ordenação das threads para que se
 def arguments():
     parser = optparse.OptionParser()
     
-    parser.add_option("-t", "--host", dest= "host", help= "Target IP/Hostname. In /24 CIDR you can use Commas to add host ID (without the netid) to same subnet or use - between values to scan ranges. Input a txt if you rather write all desired IPs on a file. If IP is v6 you can only input a single address" )
+    parser.add_option("-p", "--host", dest= "host", help= "Target IP/Hostname. In /24 CIDR you can use Commas to add host ID (without the netid) to same subnet or use - between values to scan ranges. Input a txt if you rather write all desired IPs on a file. If IP is v6 you can only input a single address" )
     parser.add_option("-i", "--ipv6", dest= "ipv6", default= False, action="store_true", help= "Port Scanning of an IPv6 IP. Use -i and input the ipv6 address at -t")
     parser.add_option("-r", "--range", dest= "range", default=False, help= "Ports. 1 value = 1 port. Values after a comma are added and values like 10-30 are ranges. Input a txt if you rather write all IPs on a file. Not using -r will make the software scan ALL PORTS")
     parser.add_option("-l", "--localhost", dest= "localhost", default= False, action="store_true", help= "Scanned host will be localhost, which is a public ip")
-    parser.add_option("-f", "--tcpscan", dest= "tcpscan", default= False, action= "store_true", help= "Triple Way Handshake") 
+    parser.add_option("-t", "--tcpscan", dest= "tcpscan", default= False, action= "store_true", help= "Triple Way Handshake") 
     parser.add_option("-s", "--stealthscan", dest= "stealthscan", default=False, action= "store_true", help= "SYN -> SYN/ACK -> Cancel three-way handshake")
     parser.add_option("-x", "--xmas", dest= "xmas", default=False, action="store_true", help= "TCP XMAS Scan" )
     parser.add_option("-a", "--ack", dest="ack", default=False, action="store_true", help= "TCP ACK Scan to detect Filtered Ports")
@@ -62,8 +62,8 @@ def arguments():
     parser.add_option("-f", "--fin", dest= "fin", default=False, action="store_true", help= "TCP Fin Scan")
     parser.add_option("-w", "--window", dest= "window", default=False, action="store_true", help = "TCP Rst Window Size Scan")
     parser.add_option("-u", "--udp", dest= "udp", default = False, action="store_true", help=" UDP Port Scanning")
-    parser.add_option("-v", "--verbose", dest= "verbose", default=False, action="store_true" help= "Scapy Verbose")
-    parser.add_option("-w", "--web", dest="webserver", default=False, action="store_true", help="Check if a webserver is running at :80 or :443" )
+    parser.add_option("-v", "--verbose", dest= "verbose", default=False, action="store_true", help= "Scapy Verbose")
+    parser.add_option("-y", "--web", dest="webserver", default=False, action="store_true", help="Check if a webserver is running at :80 or :443" )
     parser.add_option("-d", "--dump", dest="dump", default=False, action="store_true", help= "Logs the Scan Result")
     parser.add_option("-c", "--closed", dest="closed", default= False, action="store_true", help= "Show Closed Ports")
     (inputs, args) = parser.parse_args()
@@ -108,13 +108,14 @@ class PortScanner:
     def outputHeader(self, fullheader=None, hostheader=None):
         '''
         Header do Output, com algumas informações do HOST e o cabeçalho do output do programa.
-        '''   
+        '''
+        screenLock.acquire()   
         if fullheader:
            ascii_header = pyfiglet.figlet_format("PORT SCANNER")
+           print(ascii_header)
         
         if hostheader:
            print("__"*38)
-           print(ascii_header)
            print(f"Starting Scan on: {self.host}")
            try:
               print(f"HOST: {self.hostEx[0]}({self.hostEx[2][0]})")
@@ -123,7 +124,8 @@ class PortScanner:
            except:
                pass
            print("__"*38)
-           print(f"PORT \tSTATE\tSERVICE\tSCANTYPE\tOS ")
+           print(f"PORT \tSTATE\tSERVICE\tSCANTYPE\tOS\tHOST ")
+        screenLock.release()
 
     def associatePortToService(self, port):
         '''
@@ -144,9 +146,9 @@ class PortScanner:
         '''         
         try:
             openport, service = self.associatePortToService(port)
-            print(f"{openport}\t{state} \t\t{service}\t{self.scantype}")
+            print(f"{openport}\t{state}\t{service}\t{self.scantype}\t\t?\t{self.host}")
         except: 
-            print(f"{port}\t{state} \t\t?\t{self.scantype}")
+            print(f"{port}\t{state} \t\t?\t{self.scantype}\t?\t{self.host}")
 
     # def getOS(self):
 
@@ -170,7 +172,7 @@ class PortScanner:
         '''
         Three-way Handshake Scan.
         '''
-        self.scantype = "Full TCP"
+        self.scantype = "FullTCP"
         try:
             if self.ipv6:
                 conn = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
@@ -430,7 +432,7 @@ class PortScanner:
 def main():
     host, ipv6, port, localhost, tcpscan, stealthscan, xmas, ack, null, fin, window, udp, verbose, webserver, dump, closed = arguments()
     
-    hosts = list()
+    hosts = [host]
     ports = list() 
 
     if not verbose:
@@ -445,24 +447,27 @@ def main():
        Nessa função, eu lido com inputs de IPv4 que sejam digitados no formato de range, como por exemplo 192.168.0.1-10 (scan do hostid 1 ao 10)
        Também lido com inputs de IPv4 que sejam digitados para serem adicionados, como por exemplo 192.168.0.2,6,7,9 (scan do hostid 2,6,7 e 9 da subnet)
        '''
-       address, others = re.findall(r"([0-9]{1,3}[\.]?[0-9]{1,3}[\.]?[0-9]{1,3}[\.]?[0-9]{1,3})([,\-]?.*)", host)[0]  # Separar Address dos caracteres que uso pra range(-) ou soma(,)
-       if others:  
-          host_id_add = re.findall(r"[,](\w{1,3})", others)   # Localizando todos HOST_IDS que querem ser adicionados através do método (,)
-          if host_id:
-             for hostid in host_id_add: 
-                add_address = re.findall(r"(\w{1,3}.\w{1,3}.\w{1,3}.)\w{1,3}", address)[0] + hostid # NET ID + HOST ID detectado no input
-                if add_address not in hosts:
-                    hosts += [add_address]
-          host_id_range = re.findall(r"[.,]((\w{1,3})-(\w{1,3}))", others)    # Localizando todos ranges de IP digitados pelo User numa tupla (range, start do range, fim do range)
-          if host_id_range:
-             try:
-                for _,startrange, endrange in host_id_range: 
-                    for value in range(int(startrange), int(endrange) + 1):           # Pegando todos host ids do range
-                        add_address = re.findall(r"(\w{1,3}.\w{1,3}.\w{1,3}.)\w{1,3}", address)[0] + str(value)  # Adicionando net id + host id pra cada host id do range
-                        if add_address not in hosts:
-                            hosts += [add_address]
-             except:
-                pass
+       try:
+          address, others = re.findall(r"([0-9]{1,3}[\.]?[0-9]{1,3}[\.]?[0-9]{1,3}[\.]?[0-9]{1,3})([,\-]?.*)", host)[0]  # Separar Address dos caracteres que uso pra range(-) ou soma(,)
+          if others:  
+             host_id_add = re.findall(r"[,](\w{1,3})", others)   # Localizando todos HOST_IDS que querem ser adicionados através do método (,)
+             if host_id:
+                for hostid in host_id_add: 
+                   add_address = re.findall(r"(\w{1,3}.\w{1,3}.\w{1,3}.)\w{1,3}", address)[0] + hostid # NET ID + HOST ID detectado no input
+                   if add_address not in hosts:
+                       hosts += [add_address]
+             host_id_range = re.findall(r"[.,]((\w{1,3})-(\w{1,3}))", others)    # Localizando todos ranges de IP digitados pelo User numa tupla (range, start do range, fim do range)
+             if host_id_range:
+                try:
+                   for _,startrange, endrange in host_id_range: 
+                       for value in range(int(startrange), int(endrange) + 1):           # Pegando todos host ids do range
+                           add_address = re.findall(r"(\w{1,3}.\w{1,3}.\w{1,3}.)\w{1,3}", address)[0] + str(value)  # Adicionando net id + host id pra cada host id do range
+                           if add_address not in hosts:
+                               hosts += [add_address]
+                except:
+                   pass
+       except:
+          pass
 
     try:                       # Verificação se o user inputou um arquivo contendo os hosts ao invés de digitar diretamente. Caso o Try não falhe, é porque sim.
         with open(host, "r") as readfile:
@@ -505,62 +510,70 @@ def main():
 
     knownports = getKnownPorts()
 
-    PortScanner(hosts[0],0,0).outputHeader("FULL_HEADER")    
+    PortScanner(hosts[0],0,0).outputHeader("FULL_HEADER","HOST_HEADER")    
     if stealthscan:
         for target in hosts:
+            scan = PortScanner(target, 0, knownports, ipv6, verbose, webserver, dump, closed)
             for value in ports:
               scan = PortScanner(target, value, knownports, ipv6, verbose, webserver, dump, closed)
-              scan.outputHeader(None, "HOST_HEADER")
               t = threading.Thread(target= scan.stealthscan)
+              t.start()
 
     if xmas:
         for target in hosts:
+            scan = PortScanner(target, 0, knownports, ipv6, verbose, webserver, dump, closed)
             for value in ports:
               scan = PortScanner(target, value, knownports, ipv6, verbose, webserver, dump, closed)
-              scan.outputHeader(None, "HOST_HEADER")
               t = threading.Thread(target= scan.xmasscan)
+              t.start()
 
     if ack:
         for target in hosts:
+            scan = PortScanner(target, 0, knownports, ipv6, verbose, webserver, dump, closed)
             for value in ports:
               scan = PortScanner(target, value, knownports, ipv6, verbose, webserver, dump, closed)
-              scan.outputHeader(None, "HOST_HEADER")
               t = threading.Thread(target= scan.tcpackscan)
+              t.start()
     
     if null:
         for target in hosts:
+            scan = PortScanner(target, 0, knownports, ipv6, verbose, webserver, dump, closed)
             for value in ports:
               scan = PortScanner(target, value, knownports, ipv6, verbose, webserver, dump, closed)
-              scan.outputHeader(None, "HOST_HEADER")
               t = threading.Thread(target= scan.nullscan)
+              t.start()
 
     if fin:
         for target in hosts:
+            scan = PortScanner(target, 0, knownports, ipv6, verbose, webserver, dump, closed)
             for value in ports:
               scan = PortScanner(target, value, knownports, ipv6, verbose, webserver, dump, closed)
-              scan.outputHeader(None, "HOST_HEADER")
               t = threading.Thread(target= scan.finscan)
+              t.start()
 
     if window:
         for target in hosts:
+            scan = PortScanner(target, 0, knownports, ipv6, verbose, webserver, dump, closed)
             for value in ports:
               scan = PortScanner(target, value, knownports, ipv6, verbose, webserver, dump, closed)
-              scan.outputHeader(None, "HOST_HEADER")
               t = threading.Thread(target= scan.tcp_window_scan)
+              t.start()
 
     if udp:
         for target in hosts:
+            scan = PortScanner(target, 0, knownports, ipv6, verbose, webserver, dump, closed)
             for value in ports:
               scan = PortScanner(target, value, knownports, ipv6, verbose, webserver, dump, closed)
-              scan.outputHeader(None, "HOST_HEADER")
               t = threading.Thread(target= scan.udpscan)
+              t.start()
 
     if tcpscan:
         for target in hosts:
+            scan = PortScanner(target, 0, knownports, ipv6, verbose, webserver, dump, closed)
             for value in ports:
               scan = PortScanner(target, value, knownports, ipv6, verbose, webserver, dump, closed)
-              scan.outputHeader(None, "HOST_HEADER")
               t = threading.Thread(target= scan.tcpfullscan)
+              t.start()
 
 
    # FAZER UM PRINT DE HOST POR MÉTODO
