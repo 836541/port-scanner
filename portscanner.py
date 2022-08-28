@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 '''
 FIAP Checkpoint 01 - CODING FOR SECURITY
 Leonardo Dalantonia Poloni (github.com/undeadwarlock) 
