@@ -562,6 +562,7 @@ def main():
 
 if __name__ == "__main__":
     print("\n[!] If didn't start yet, press CTRL + C one time")
+    print("[!] If the software is too slow, change inline the timeout value of your desired scan to a smaller value like 3s")
     main()
 
    
