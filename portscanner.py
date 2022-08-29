@@ -1,47 +1,8 @@
 #!/usr/bin/python3
 '''
-FIAP Checkpoint 01 - CODING FOR SECURITY
-Leonardo Dalantonia Poloni (github.com/undeadwarlock) 
-GPL3.0-or-foward
-Version 1.0
-
-Features pedidas no Checkpoint
-[1] Verificar todas portas abertas do host  -> Feito em todas opções de SCAN
-[2] Verificar o localhost                   -> opção -l/--localhost adiciona o localhost à pool de hosts
-[3] Verificar o Sistema Operacional do Host (-o ou --os) -> opção -o pega o SO através de um regex no banner
-[4] Verificar se há servidor WEB na 80/443 (-y ou --web) -> feito através de detecção da string HTTP no banner
-[5] Tipos de SCAN:
-5.0 - FULL TCP SCAN       -> -t
-5.1 - STEALTH SCAN        -> -s
-5.2 - NULL SCAN           -> -n
-5.3 - FYN SCAN            -> -f
-5.4 - XMAS SCAN           -> -x
-5.5 - ACK SCAN            -> -a
-5.6 - ACK WINDOW SIZE VALUE SCAN -> -w
-5.7 - UDP SCAN        -> -u
-[6] Features extras além dos tipos de scans:
-6.0 -> Threads para aumentar a velocidade
-6.1 - Verbose         (-v/--verbose) 
-6.2 - Banner Grabbing (-b/--banner)
-6.3 - IPv6            (-i/--ipv6)
-6.4 - O parãmetro -p, onde deve ser inputado as portas, aceita 4 tipos de sintaxe (Podem ser combinados, com excessão da sintaxe D)
-A- 1 valor de porta qualquer
-B- Mais de um valor de porta, desde que separadas por vírgula -> 80,443,8080
-C- Ranges de Portas  -> 1-14214
-D- Um arquivo contendo uma porta escrita por linha
-E- Se -p não for usado, todas portas serão scaneadas
-6.5 - O parâmetro -r, onde deve ser inputado o host alvo aceita os tipos de sintaxe:
-A- Valor URL
-B- Valor IPv6 (caso -i seja usado depois também)
-C- Net IDs que também devem ser scaneados, escritos após um IPv4 -> 192.168.0.1,2,3,4 scaneia  1, 2, 3 e 4.
-D- Ranges de NET IDs, escritos após um IPv4 -> 192.168.0.1,20-40    -> scaneia o host id 1 e do 20 a0 40. 
-Pode ser usado C com D, como: 192.168.0.1,2,40-80   -> scan do host id 1,2 e do 40 ao 80. C e D só funcionam para IPv4.
-
-EM DESENVOLVIMENTO PARA VERSÃO 2.0:
--d (--dump) para gerar o relatório do scanning
--c (--closed) para mostrar as portas fechadas
--o com uma potência maior que a atual visto que banner grabbing não é tao bom quanto TCP/IP Stack Fingerprinting para detecção de OS.
-
+/undead_warlock
+Some functions are in development: --dump, --closed. 
+Maybe in future I will try to add OS Fingerprinting Detection instead of Banner Grabbing which is a outdated technique.
 '''
 from scapy.all import *
 import threading 
