@@ -204,7 +204,7 @@ class PortScanner:
         tcp_ip = ip_packet/tcp_packet
 
 
-        stealth_scan = sr1(tcp_ip, timeout= 10)           # Envio do pacote utilizando SR1, pois só quero receber 1 pacote de resposta. O SR recebe todos.     
+        stealth_scan = sr1(tcp_ip, timeout= 3)           # Envio do pacote utilizando SR1, pois só quero receber 1 pacote de resposta. O SR recebe todos.     
         if stealth_scan == None:                          # Se o pacote sucedeu, mas não houve resposta, há um Firewall Filtrando
             self.outputBody(self.port, "FILTERED      ")
         else:   
@@ -235,7 +235,7 @@ class PortScanner:
            ip_packet  = IP (dst= self.host)
         tcp_packet = TCP(dport= self.port, flags= "FPU")      # pacote TCP com as flags FYN, PSH e URG
         tcp_ip = ip_packet/tcp_packet
-        xmas_scan  = sr1(tcp_ip, timeout= 10)
+        xmas_scan  = sr1(tcp_ip, timeout= 3)
 
 
         if xmas_scan == None:                              # SEM RESPOSTA -> OPEN OU FILTERED
@@ -264,7 +264,7 @@ class PortScanner:
            ip_packet  = IP (dst= self.host)
         tcp_packet = TCP(dport= self.port, flags="F")
         tcp_ip = ip_packet/tcp_packet 
-        fin_scan   = sr1(tcp_ip, timeout=10)
+        fin_scan   = sr1(tcp_ip, timeout=3)
 
 
         if fin_scan == None:
@@ -294,7 +294,7 @@ class PortScanner:
         ip_packet = IP (dst= self.host) 
         tcp_packet= TCP(dport= self.port, flags='')
         tcp_ip = ip_packet/tcp_packet
-        null_scan = sr1(tcp_ip, timeout=10)
+        null_scan = sr1(tcp_ip, timeout=3)
 
         if null_scan == None:
             self.outputBody(self.port, "OPEN or FILTER")
@@ -322,7 +322,7 @@ class PortScanner:
            ip_packet  = IP (dst= self.host)
         tcp_packet = TCP(dport= self.port, flags= "A")
         tcp_ip = ip_packet/tcp_packet
-        tcp_ack_scan = sr1(tcp_ip, timeout=10)
+        tcp_ack_scan = sr1(tcp_ip, timeout=3)
 
 
         if tcp_ack_scan == None:
@@ -350,7 +350,7 @@ class PortScanner:
            ip_packet  = IP (dst= self.host)
         tcp_packet = TCP(dport=self.port, flags="A")
         tcp_ip = ip_packet/tcp_packet
-        tcp_window_scan = sr1(tcp_ip, timeout=10)
+        tcp_window_scan = sr1(tcp_ip, timeout=3)
 
         
         if tcp_window_scan == None:
@@ -383,7 +383,7 @@ class PortScanner:
 
 
         for num in range(3):            # Como a garantia de entrega do UDP é feita pela camada 07 (menos garantia), devemos capturar mais de 1 pacote pra ter certeza quanto ao scan.
-            udp_packets.append(sr1(udp_ip, timeout=10))
+            udp_packets.append(sr1(udp_ip, timeout=3))
 
         for response in udp_packets:
             if response != None: 
