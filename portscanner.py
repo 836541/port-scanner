@@ -425,7 +425,7 @@ def main():
        try:
           address, others = re.findall(r"([0-9]{1,3}[\.]?[0-9]{1,3}[\.]?[0-9]{1,3}[\.]?[0-9]{1,3})([,\-]?.*)", host)[0]  # Separar Address dos caracteres que uso pra range(-) ou soma(,)
           if others:  
-             host_id_add = re.findall(r"[,](\w{1,3})", others)   # Localizando todos HOST_IDS que querem ser adicionados através do método (,)
+             host_id_add = re.findall(r"[,](\w{1,5})", others)   # Localizando todos HOST_IDS que querem ser adicionados através do método (,)
              if host_id:
                 for hostid in host_id_add: 
                    add_address = re.findall(r"(\w{1,3}.\w{1,3}.\w{1,3}.)\w{1,3}", address)[0] + hostid # NET ID + HOST ID detectado no input
